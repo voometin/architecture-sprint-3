@@ -3,20 +3,47 @@ title SmartHome Microservices To-Be Heating System Code Diagram
 
 top to bottom direction
 
-class SensorDataGetterService {
-  +List[DeviceInfo] deivces
-  +KafkaConnector kafka_connection
-  +json getTelemetryData(DeviceInfo)
-  +void produce(TelemetryData, str topic_name)
-  +DeviceInfo consume(str topic_name)
+class APIHandler {
+  +json getTemperature(int device_id)
+  +json setTemperature(int device_id, int temperature)
 }
 
-class UserResponseHeatingProcessingService {
-  +KafkaConnector kafka_connection
-  +json getTemperature(int device_id)
-  +json setTemperature(int device_id, int value)
-  +TelemetryData consume(str topic_name)
-  +DeviceInfo consume(str topic_name)
+class APIDeviceHandler {
+  +TelemetryData getTemperature(DeviceInfo)
+  +json setTemperature(DeviceInfo, int temperature)
+}
+
+class Controller {
+  +List[DeviceInfo] devices
+  +APIHandler api_handler
+  +KafkaConsumer consumer
+  +void consumeDeviceInfo()
+  +TelemetryData getTemperature(DeviceInfo)
+  +json setTemperature(DeviceInfo, int temperature)
+  +APIDeviceHandler _getDeviceAPIHandler(DeviceInfo)
+}
+
+class KafkaConsumer {
+  +KafkaConnector connection
+  +TelemetryData consumeTelemetryData()
+  +DeviceInfo consumeNewDeviceInfo()
+  +DeviceInfo consumeUpdatedDeviceInfo()
+  +DeviceInfo consumeRemovedDeviceInfo()
+}
+
+class KafkaProducer {
+  +KafkaConnector connection
+  void produceTelemetryData(TelemetryData)
+}
+
+class SensorDataGetterService {
+  +List[DeviceInfo] devices
+  +KafkaProducer producer
+  +KafkaConsumer consumer
+  +void consumeDeviceInfo(DeviceInfo)
+  +APIDeviceHandler _getDeviceAPIHandler(DeviceInfo)
+  +TelemetryData getTelemetryData(DeviceInfo)
+  +void produceTelemetryData(TelemetryData)
 }
 
 class KafkaBrokerConfig {
@@ -50,9 +77,16 @@ class TelemetryData {
 }
 
 KafkaConnector --> KafkaBrokerConfig : uses
-SensorDataGetterService --> KafkaConnector: consume devices, produce telemetry
-UserResponseHeatingProcessingService --> KafkaConnector: consume telemetry
-UserResponseHeatingProcessingService --> DataFactory: uses
+KafkaConsumer --> KafkaConnector: uses
+KafkaProducer --> KafkaConnector: uses
+Controller --> APIHandler: uses
+Controller --> APIDeviceHandler: uses
+Controller --> KafkaConsumer: consume devices, telemetry
+APIDeviceHandler --> DataFactory: uses
+SensorDataGetterService --> KafkaConsumer: consume devices
+SensorDataGetterService --> KafkaProducer: produce telemetry
+SensorDataGetterService --> APIDeviceHandler: uses
+KafkaConsumer --> DataFactory: uses
 SensorDataGetterService --> DataFactory: uses
 DataFactory --> DeviceInfo: build
 DataFactory --> TelemetryData: build

@@ -12,44 +12,34 @@ Container(user_heating_system, "User Heating System"){
     Component(user_heating_controller, "HeatingController", "Set temperature")
 }
 
-Container_Boundary(managing_system, "Managing system") {
-    Component(user_register, "UserRegistrationService", "Process POST User registration requests")
-    Component(user_signin, "UserSigninService", "Process POST User sign-in requests")
-    Component(device_registration, "DeviceRegistrationService", "Process user POST device registration requests.")
-    Component(device_update, "DeviceConfigUpdateService", "Process user POST device config update requests.")
-    Component(device_remove, "DeviceConfigRemoveService", "Process user DELETE device config remove requests.")
-}
-
 Container_Boundary(heating_system, "Heating system") {
-    Component(heating_telemetry_getter, "SensorDataGetterService", "Consume new connected devices info. Send request to sensors and response to Kafka.")
-    Component(heating_controller, "UserResponseProcessingService", "Process user GET/POST (get/set temperature) methods.")
+    Component(api_user_handler, "API User Handler", "Process user GET/POST (get/set temperature) requests")
+    Component(api_device_handler, "API Device Handler", "Process system GET/POST (get/set temperature) requests")
+    Component(business_logic, "Business Logic Controller", "Get latest temperature info, send post request")
+    Component(kafka_consumer, "Kafka Consumer", "Consume new connected devices info, telemetry data")
+    Component(kafka_producer, "Kafka Producer", "Produce telemetry data")
+    Component(heating_telemetry_getter, "SensorDataGetterService", "Consume new connected devices info. Send request to sensors and response.")
 }
 
-ComponentDb(user_device_db, "User info and device config", "PostgreSQL")
 SystemQueue(kafka, "Kafka", "New/updated configured devices, telemetry data")
 
-Rel(user, api_gateway, "Configure/Monitor SmartHome System")
-Rel(api_gateway, heating_controller, "Get/Set telemetry data (temperature) - GET/POST requests")
-Rel(api_gateway, user_register, "SignUp - POST")
-Rel(user_register, user_device_db, "Insert")
-Rel(api_gateway, user_signin, "SignIn - POST. Return Auth token")
-Rel(user_signin, user_device_db, "Check login success status and insert generated Auth token in case of success")
-Rel(api_gateway, device_registration, "Device registration - POST")
-Rel(device_registration, user_device_db, "Insert device info")
-Rel(api_gateway, device_update, "Device config update - POST")
-Rel(device_update, user_device_db, "Update device info")
-Rel(api_gateway, device_remove, "Device config removal - DELETE")
-Rel(device_remove, user_device_db, "Delete device info")
+Rel(user, api_gateway, "Get/Set temperature")
+Rel(api_gateway, api_user_handler, "Get/Set telemetry data (temperature) - GET/POST requests")
 
-Rel(device_registration, kafka, "Produce new device info")
-Rel(device_update, kafka, "Produce device info update")
-Rel(device_remove, kafka, "Produce device info remove")
+Rel(api_user_handler, business_logic, "Calls business logic")
 
-Rel(kafka, heating_telemetry_getter, "Consume device info add/update/remove")
-Rel(kafka, heating_controller, "Consume telemetry data")
-Rel(heating_telemetry_getter, kafka, "Produce telemetry data")
+Rel(business_logic, kafka_consumer, "Get latest telemetry data, new/updated device info")
+' Rel(business_logic, heating_telemetry_getter, "Add/update device info")
+Rel(business_logic, api_device_handler, "Send request to set a specific temperature")
 
-Rel(heating_controller, user_heating_controller, "Set temperature - POST request")
-Rel(heating_telemetry_getter, user_heating_sensors, "Get telemetry data - GET request")
+Rel(kafka_consumer, kafka, "Consume telemetry data, new/updated devices info")
+Rel(kafka_producer, kafka, "Produce telemetry data")
+
+Rel(heating_telemetry_getter, kafka_consumer, "Consume new/updated devices info")
+Rel(heating_telemetry_getter, kafka_producer, "Send request to produce telemetry data")
+
+Rel(heating_telemetry_getter, api_device_handler, "Send request to get telemetry data")
+Rel(api_device_handler, user_heating_sensors, "Get telemetry data - GET request")
+Rel(api_device_handler, user_heating_controller, "Set telemetry data - POST request")
 
 @enduml

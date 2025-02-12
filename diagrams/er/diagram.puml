@@ -59,8 +59,9 @@ Table(Telemetry) {
 Device }|-- Telemetry: ONE-TO-MANY
 User ||-- AuthTokens: ONE-TO-ONE
 User ||-- House: ONE-TO-ONE
-User }|-- Device: ONE-TO-MANY
+House }|-- Device: ONE-TO-MANY
 IPTable }|-- Device: ONE-TO-MANY
 DeviceType }|-- Device: ONE-TO-MANY
 
+caption User can have multiple houses. There might be multiplce devices per house. \n Each unique device in every house is identified with specified IP and port.
 @enduml
