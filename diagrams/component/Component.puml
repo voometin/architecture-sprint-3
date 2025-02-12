@@ -1,0 +1,45 @@
+@startuml
+title SmartHome Microservices To-Be Component Diagram
+
+top to bottom direction
+
+!include https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "User", "A user of the smart-home")
+Component(api_gateway, "API Gateway", "Routing queries.")
+Container(user_heating_system, "User Heating System"){
+    Component(user_heating_sensors, "HeatingSensors", "Send Telemetry data")
+    Component(user_heating_controller, "HeatingController", "Set temperature")
+}
+
+Container_Boundary(heating_system, "Heating system") {
+    Component(api_user_handler, "API User Handler", "Process user GET/POST (get/set temperature) requests")
+    Component(api_device_handler, "API Device Handler", "Process system GET/POST (get/set temperature) requests")
+    Component(business_logic, "Business Logic Controller", "Get latest temperature info, send post request")
+    Component(kafka_consumer, "Kafka Consumer", "Consume new connected devices info, telemetry data")
+    Component(kafka_producer, "Kafka Producer", "Produce telemetry data")
+    Component(heating_telemetry_getter, "SensorDataGetterService", "Consume new connected devices info. Send request to sensors and response.")
+}
+
+SystemQueue(kafka, "Kafka", "New/updated configured devices, telemetry data")
+
+Rel(user, api_gateway, "Get/Set temperature")
+Rel(api_gateway, api_user_handler, "Get/Set telemetry data (temperature) - GET/POST requests")
+
+Rel(api_user_handler, business_logic, "Calls business logic")
+
+Rel(business_logic, kafka_consumer, "Get latest telemetry data, new/updated device info")
+' Rel(business_logic, heating_telemetry_getter, "Add/update device info")
+Rel(business_logic, api_device_handler, "Send request to set a specific temperature")
+
+Rel(kafka_consumer, kafka, "Consume telemetry data, new/updated devices info")
+Rel(kafka_producer, kafka, "Produce telemetry data")
+
+Rel(heating_telemetry_getter, kafka_consumer, "Consume new/updated devices info")
+Rel(heating_telemetry_getter, kafka_producer, "Send request to produce telemetry data")
+
+Rel(heating_telemetry_getter, api_device_handler, "Send request to get telemetry data")
+Rel(api_device_handler, user_heating_sensors, "Get telemetry data - GET request")
+Rel(api_device_handler, user_heating_controller, "Set telemetry data - POST request")
+
+@enduml

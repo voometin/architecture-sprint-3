@@ -1,0 +1,94 @@
+@startuml
+title SmartHome Microservices To-Be Heating System Code Diagram
+
+top to bottom direction
+
+class APIHandler {
+  +json getTemperature(int device_id)
+  +json setTemperature(int device_id, int temperature)
+}
+
+class APIDeviceHandler {
+  +TelemetryData getTemperature(DeviceInfo)
+  +json setTemperature(DeviceInfo, int temperature)
+}
+
+class Controller {
+  +List[DeviceInfo] devices
+  +APIHandler api_handler
+  +KafkaConsumer consumer
+  +void consumeDeviceInfo()
+  +TelemetryData getTemperature(DeviceInfo)
+  +json setTemperature(DeviceInfo, int temperature)
+  +APIDeviceHandler _getDeviceAPIHandler(DeviceInfo)
+}
+
+class KafkaConsumer {
+  +KafkaConnector connection
+  +TelemetryData consumeTelemetryData()
+  +DeviceInfo consumeNewDeviceInfo()
+  +DeviceInfo consumeUpdatedDeviceInfo()
+  +DeviceInfo consumeRemovedDeviceInfo()
+}
+
+class KafkaProducer {
+  +KafkaConnector connection
+  void produceTelemetryData(TelemetryData)
+}
+
+class SensorDataGetterService {
+  +List[DeviceInfo] devices
+  +KafkaProducer producer
+  +KafkaConsumer consumer
+  +void consumeDeviceInfo(DeviceInfo)
+  +APIDeviceHandler _getDeviceAPIHandler(DeviceInfo)
+  +TelemetryData getTelemetryData(DeviceInfo)
+  +void produceTelemetryData(TelemetryData)
+}
+
+class KafkaBrokerConfig {
+  int id
+  ...
+}
+
+class KafkaConnector {
+  +KafkaBrokerConfig broker_config
+  +KafkaConnector getConnection()
+  +void produce(data, str topic_name)
+  +data consume(str topic_name)
+}
+
+class DataFactory {
+  +DeviceInfo buildDeviceInfo(device_info_data)
+  +TelemetryData buildTelemetryData(telemetry_data)
+}
+
+class DeviceInfo {
+  +int id
+  +str ip_address
+  +int port
+}
+
+class TelemetryData {
+  +int id
+  +int timestamp
+  +int device_id
+  +json value
+}
+
+KafkaConnector --> KafkaBrokerConfig : uses
+KafkaConsumer --> KafkaConnector: uses
+KafkaProducer --> KafkaConnector: uses
+Controller --> APIHandler: uses
+Controller --> APIDeviceHandler: uses
+Controller --> KafkaConsumer: consume devices, telemetry
+APIDeviceHandler --> DataFactory: uses
+SensorDataGetterService --> KafkaConsumer: consume devices
+SensorDataGetterService --> KafkaProducer: produce telemetry
+SensorDataGetterService --> APIDeviceHandler: uses
+KafkaConsumer --> DataFactory: uses
+SensorDataGetterService --> DataFactory: uses
+DataFactory --> DeviceInfo: build
+DataFactory --> TelemetryData: build
+
+@enduml
